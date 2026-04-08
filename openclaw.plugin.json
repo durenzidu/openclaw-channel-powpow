@@ -6,6 +6,14 @@
   "author": "soimy",
   "license": "MIT",
   "homepage": "https://github.com/durenzidu/openclaw-channel-powpow",
+  "openclaw": {
+    "compat": {
+      "pluginApi": "1.0.0"
+    },
+    "build": {
+      "openclawVersion": "2026.3.24"
+    }
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/durenzidu/openclaw-channel-powpow.git"
