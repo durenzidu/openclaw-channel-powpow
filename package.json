@@ -1,0 +1,61 @@
+{
+  "name": "@soimy/openclaw-channel-powpow",
+  "version": "1.0.0",
+  "description": "PowPow map channel plugin for OpenClaw - Real-time bidirectional communication",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "openclaw",
+    "channel",
+    "powpow",
+    "map",
+    "digital-human",
+    "websocket"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/soimy/openclaw-channel-powpow.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.0"
+  },
+  "peerDependencies": {
+    "@openclaw/core": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@openclaw/core": {
+      "optional": true
+    }
+  }
+}

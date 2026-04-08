@@ -1,0 +1,80 @@
+{
+  "name": "openclaw-channel-powpow",
+  "version": "1.0.0",
+  "description": "PowPow 地图实时通信渠道插件，用于 OpenClaw 与 PowPow 数字人的双向实时消息传递",
+  "author": "soimy",
+  "license": "MIT",
+  "homepage": "https://github.com/soimy/openclaw-channel-powpow",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/soimy/openclaw-channel-powpow.git"
+  },
+  "keywords": [
+    "openclaw",
+    "channel",
+    "powpow",
+    "map",
+    "digital-human",
+    "websocket",
+    "real-time",
+    "communication"
+  ],
+  "type": "channel",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.0"
+  },
+  "peerDependencies": {
+    "@openclaw/core": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@openclaw/core": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "clawhub": {
+    "category": "channel",
+    "tags": [
+      "communication",
+      "powpow",
+      "map",
+      "digital-human",
+      "websocket",
+      "real-time"
+    ],
+    "features": [
+      "实时 WebSocket 通信",
+      "流式输出支持",
+      "多媒体消息（文本/图片/语音/视频）",
+      "自动重连机制",
+      "多账号实例支持",
+      "访问控制（白名单/黑名单）",
+      "Markdown 格式支持"
+    ],
+    "screenshots": [],
+    "documentation": "docs/USER_GUIDE.md"
+  }
+}
