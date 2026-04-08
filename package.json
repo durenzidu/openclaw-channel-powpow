@@ -1,5 +1,5 @@
 {
-  "name": "@soimy/openclaw-channel-powpow",
+  "name": "@durenzidu/openclaw-channel-powpow",
   "version": "1.0.0",
   "description": "PowPow map channel plugin for OpenClaw - Real-time bidirectional communication",
   "type": "module",
@@ -11,10 +11,20 @@
       "import": "./dist/index.js"
     }
   },
+  "openclaw": {
+    "compat": {
+      "pluginApi": "1.0.0"
+    },
+    "build": {
+      "openclawVersion": "2026.3.24"
+    },
+    "extensions": ["channel"]
+  },
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "openclaw.plugin.json"
   ],
   "scripts": {
     "build": "tsc",
@@ -32,11 +42,11 @@
     "digital-human",
     "websocket"
   ],
-  "author": "Your Name",
+  "author": "durenzidu",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/soimy/openclaw-channel-powpow.git"
+    "url": "https://github.com/durenzidu/openclaw-channel-powpow.git"
   },
   "engines": {
     "node": ">=18.0.0"

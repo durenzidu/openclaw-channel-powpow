@@ -1,9 +1,10 @@
 {
-  "name": "@soimy/openclaw-channel-powpow",
+  "name": "@durenzidu/openclaw-channel-powpow",
   "version": "1.0.0",
+  "id": "powpow",
   "description": "PowPow 地图实时通信渠道插件，用于 OpenClaw 与 PowPow 数字人的双向实时消息传递",
   "type": "channel",
-  "author": "soimy",
+  "author": "durenzidu",
   "license": "MIT",
   "homepage": "https://github.com/durenzidu/openclaw-channel-powpow",
   "openclaw": {
@@ -92,5 +93,102 @@
       "Markdown 格式支持"
     ],
     "documentation": "docs/USER_GUIDE.md"
+  },
+  "configSchema": {
+    "type": "object",
+    "required": ["accounts"],
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "是否启用 Channel"
+      },
+      "accounts": {
+        "type": "array",
+        "description": "账号配置列表",
+        "items": {
+          "type": "object",
+          "required": ["id", "digitalHumanId", "name"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "账号唯一标识"
+            },
+            "digitalHumanId": {
+              "type": "string",
+              "description": "PowPow 数字人 ID"
+            },
+            "name": {
+              "type": "string",
+              "description": "账号名称"
+            },
+            "wsUrl": {
+              "type": "string",
+              "format": "uri",
+              "description": "WebSocket 地址",
+              "default": "wss://global.powpow.online:8080"
+            },
+            "dmPolicy": {
+              "type": "string",
+              "enum": ["open", "allowlist", "blocklist"],
+              "default": "open",
+              "description": "私聊策略"
+            },
+            "allowFrom": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "白名单/黑名单用户 ID 列表"
+            },
+            "messageType": {
+              "type": "string",
+              "enum": ["text", "markdown"],
+              "default": "markdown",
+              "description": "消息类型"
+            }
+          }
+        }
+      },
+      "advanced": {
+        "type": "object",
+        "description": "高级配置",
+        "properties": {
+          "autoReconnect": {
+            "type": "boolean",
+            "default": true,
+            "description": "自动重连"
+          },
+          "reconnectInterval": {
+            "type": "number",
+            "default": 3000,
+            "description": "重连间隔（毫秒）"
+          },
+          "maxReconnectAttempts": {
+            "type": "number",
+            "default": 10,
+            "description": "最大重连次数"
+          },
+          "maxMessageLength": {
+            "type": "number",
+            "default": 2000,
+            "description": "最大消息长度"
+          },
+          "enableStreaming": {
+            "type": "boolean",
+            "default": true,
+            "description": "启用流式输出"
+          },
+          "enableCards": {
+            "type": "boolean",
+            "default": false,
+            "description": "启用 AI 卡片"
+          },
+          "debug": {
+            "type": "boolean",
+            "default": false,
+            "description": "调试模式"
+          }
+        }
+      }
+    }
   }
 }
