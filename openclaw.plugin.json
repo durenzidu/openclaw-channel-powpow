@@ -1,6 +1,6 @@
 {
   "name": "@durenzidu/openclaw-channel-powpow",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "id": "powpow",
   "description": "PowPow 地图实时通信渠道插件，用于 OpenClaw 与 PowPow 数字人的双向实时消息传递",
   "type": "channel",
