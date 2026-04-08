@@ -314,5 +314,5 @@ MIT License
 
 ## 联系方式
 
-- GitHub: [@soimy](https://github.com/soimy)
+- GitHub: dongtao@outlook.com
 - 项目地址：https://github.com/soimy/openclaw-channel-powpow
