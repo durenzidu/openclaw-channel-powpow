@@ -1,6 +1,6 @@
 {
   "name": "@durenzidu/openclaw-channel-powpow",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "PowPow map channel plugin for OpenClaw - Real-time bidirectional communication",
   "type": "module",
   "main": "./dist/index.js",
