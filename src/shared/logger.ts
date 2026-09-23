@@ -2,50 +2,68 @@
  * 日志工具
  */
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-interface Logger {
-  debug: (...args: unknown[]) => void;
-  info: (...args: unknown[]) => void;
-  warn: (...args: unknown[]) => void;
-  error: (...args: unknown[]) => void;
-  setLevel: (level: LogLevel) => void;
+const LEVEL_ORDER: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+};
+
+class PowPowLogger {
+  private level: LogLevel = 'info';
+  private readonly prefix = '[powpow-channel]';
+
+  setLevel(level: LogLevel): void {
+    this.level = level;
+  }
+
+  private shouldLog(level: LogLevel): boolean {
+    return LEVEL_ORDER[level] >= LEVEL_ORDER[this.level];
+  }
+
+  private format(args: unknown[]): string {
+    return args
+      .map((arg) => {
+        if (arg instanceof Error) {
+          return arg.message;
+        }
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg);
+          } catch {
+            return String(arg);
+          }
+        }
+        return String(arg);
+      })
+      .join(' ');
+  }
+
+  debug(...args: unknown[]): void {
+    if (this.shouldLog('debug')) {
+      console.log(this.prefix, this.format(args));
+    }
+  }
+
+  info(...args: unknown[]): void {
+    if (this.shouldLog('info')) {
+      console.log(this.prefix, this.format(args));
+    }
+  }
+
+  warn(...args: unknown[]): void {
+    if (this.shouldLog('warn')) {
+      console.warn(this.prefix, this.format(args));
+    }
+  }
+
+  error(...args: unknown[]): void {
+    if (this.shouldLog('error')) {
+      console.error(this.prefix, this.format(args));
+    }
+  }
 }
 
-let currentLevel: LogLevel = 'info';
-
-const log = (level: LogLevel, ...args: unknown[]) => {
-  const levelOrder: LogLevel[] = ['debug', 'info', 'warn', 'error'];
-  if (levelOrder.indexOf(level) < levelOrder.indexOf(currentLevel)) {
-    return;
-  }
-
-  const timestamp = new Date().toISOString();
-  const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
-  
-  switch (level) {
-    case 'debug':
-      console.debug(prefix, ...args);
-      break;
-    case 'info':
-      console.info(prefix, ...args);
-      break;
-    case 'warn':
-      console.warn(prefix, ...args);
-      break;
-    case 'error':
-      console.error(prefix, ...args);
-      break;
-  }
-};
-
-export const logger: Logger = {
-  debug: (...args: unknown[]) => log('debug', ...args),
-  info: (...args: unknown[]) => log('info', ...args),
-  warn: (...args: unknown[]) => log('warn', ...args),
-  error: (...args: unknown[]) => log('error', ...args),
-  setLevel: (level: LogLevel) => {
-    currentLevel = level;
-    log('info', `日志级别已设置为：${level}`);
-  },
-};
+export const logger = new PowPowLogger();

@@ -1,124 +1,96 @@
 /**
  * 出站消息发送服务
- * 负责将消息发送到 PowPow
+ * 通过 PowPow 平台 webhook/receive 接口把 agent 回复写回数字人会话
+ * （POST /api/openclaw/webhook/receive，webhook_token 鉴权）
  */
 
-import type WebSocket from 'ws';
-import type { PowPowMessage, PowPowContentType } from '../types.js';
 import { logger } from '../shared/logger.js';
 
-/**
- * 发送文本消息
- */
-export async function sendTextMessage(
-  ws: WebSocket,
-  message: PowPowMessage
-): Promise<boolean> {
-  try {
-    const payload = {
-      type: 'chat_message',
-      digitalHumanId: message.digitalHumanId,
-      senderType: 'openclaw' as const,
-      senderId: message.digitalHumanId, // 使用数字人 ID 作为发送者
-      content: message.content,
-      contentType: 'text' as const,
-      timestamp: Date.now(),
-    };
-
-    ws.send(JSON.stringify(payload));
-    logger.debug('发送文本消息:', payload);
-    return true;
-  } catch (error) {
-    logger.error('发送文本消息失败:', error);
-    return false;
-  }
+export interface ReplyParams {
+  apiBaseUrl: string;
+  digitalHumanId: string;
+  webhookToken: string;
+  content: string;
+  sessionId?: string;
+  openclawUserId?: string;
+  requestTimeoutMs: number;
+  maxRetries: number;
 }
 
-/**
- * 发送媒体消息（图片/语音/视频）
- */
-export async function sendMediaMessage(
-  ws: WebSocket,
-  message: PowPowMessage,
-  contentType: PowPowContentType
-): Promise<boolean> {
-  try {
-    if (!message.mediaUrl) {
-      logger.error('媒体消息缺少 mediaUrl');
-      return false;
+export interface ReplyResult {
+  messageId: string;
+  sessionId: string;
+}
+
+interface ReceiveResponse {
+  success?: boolean;
+  error?: string;
+  data?: {
+    message_id?: string;
+    session_id?: string;
+    status?: string;
+  };
+}
+
+export async function sendReply(params: ReplyParams): Promise<ReplyResult> {
+  const url = `${params.apiBaseUrl.replace(/\/+$/, '')}/api/openclaw/webhook/receive`;
+
+  const body = {
+    digital_human_id: params.digitalHumanId,
+    message: params.content,
+    webhook_token: params.webhookToken,
+    ...(params.sessionId ? { session_id: params.sessionId } : {}),
+    ...(params.openclawUserId ? { openclaw_user_id: params.openclawUserId } : {}),
+  };
+
+  let lastError = 'unknown error';
+
+  for (let attempt = 1; attempt <= params.maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), params.requestTimeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Webhook-Token': params.webhookToken,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      const json = (await response.json().catch(() => null)) as ReceiveResponse | null;
+
+      if (response.ok && json?.success && json.data?.message_id) {
+        logger.debug(`回复发送成功：message_id=${json.data.message_id}`);
+        return {
+          messageId: json.data.message_id,
+          sessionId: json.data.session_id || params.sessionId || '',
+        };
+      }
+
+      lastError = json?.error || `HTTP ${response.status}`;
+
+      // 4xx 客户端错误（token 无效、数字人非活跃等）重试无意义，直接抛出
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        throw new Error(`回复被平台拒绝：${lastError}`);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('回复被平台拒绝')) {
+        throw error;
+      }
+      lastError = error instanceof Error ? error.message : String(error);
+    } finally {
+      clearTimeout(timeout);
     }
 
-    const payload = {
-      type: 'chat_message',
-      digitalHumanId: message.digitalHumanId,
-      senderType: 'openclaw' as const,
-      senderId: message.digitalHumanId,
-      content: message.content || '',
-      contentType: contentType,
-      mediaUrl: message.mediaUrl,
-      duration: message.duration,
-      timestamp: Date.now(),
-    };
-
-    ws.send(JSON.stringify(payload));
-    logger.debug(`发送${contentType}消息:`, payload);
-    return true;
-  } catch (error) {
-    logger.error(`发送${contentType}消息失败:`, error);
-    return false;
+    if (attempt < params.maxRetries) {
+      const delay = Math.pow(2, attempt - 1) * 1000;
+      logger.debug(`回复发送失败（${lastError}），${delay}ms 后重试 ${attempt + 1}/${params.maxRetries}`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
-}
 
-/**
- * 发送图片消息
- */
-export async function sendImageMessage(
-  ws: WebSocket,
-  message: PowPowMessage
-): Promise<boolean> {
-  return sendMediaMessage(ws, message, 'image');
-}
-
-/**
- * 发送语音消息
- */
-export async function sendVoiceMessage(
-  ws: WebSocket,
-  message: PowPowMessage
-): Promise<boolean> {
-  return sendMediaMessage(ws, message, 'voice');
-}
-
-/**
- * 发送视频消息
- */
-export async function sendVideoMessage(
-  ws: WebSocket,
-  message: PowPowMessage
-): Promise<boolean> {
-  return sendMediaMessage(ws, message, 'video');
-}
-
-/**
- * 统一消息发送入口
- */
-export async function sendMessage(
-  ws: WebSocket,
-  message: PowPowMessage
-): Promise<boolean> {
-  const contentType = message.contentType || 'text';
-
-  switch (contentType) {
-    case 'text':
-      return sendTextMessage(ws, message);
-    case 'image':
-      return sendImageMessage(ws, message);
-    case 'voice':
-      return sendVoiceMessage(ws, message);
-    case 'video':
-      return sendVideoMessage(ws, message);
-    default:
-      logger.warn('不支持的消息类型:', contentType);
-      return sendTextMessage(ws, message);
-  }
+  throw new Error(`回复发送失败（已重试 ${params.maxRetries} 次）：${lastError}`);
 }

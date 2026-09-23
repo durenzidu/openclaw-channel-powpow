@@ -1,95 +1,96 @@
 /**
  * 入站消息处理器
- * 负责处理从 PowPow 接收到的消息
+ * 将 digital_human_dialogues 的行（Realtime snake_case / history camelCase）
+ * 标准化为 OpenClaw 入站消息
  */
 
-import type { PowPowWsMessage, PowPowMessage } from '../types.js';
+import type {
+  DialogueDbRow,
+  HistoryMessage,
+  NormalizedInbound,
+  PowPowContentType,
+} from '../types.js';
 import { logger } from '../shared/logger.js';
 
 /**
- * 将 WebSocket 消息标准化为 OpenClaw 消息格式
+ * 标准化 Realtime 推送的数据库行
  */
-export function normalizeIncomingMessage(wsMessage: PowPowWsMessage): PowPowMessage | null {
-  try {
-    // 忽略心跳消息
-    if (wsMessage.type === 'heartbeat') {
-      return null;
-    }
-
-    // 忽略连接确认消息
-    if (wsMessage.type === 'connected' || wsMessage.type === 'disconnected') {
-      return null;
-    }
-
-    // 只处理聊天消息
-    if (wsMessage.type !== 'chat_message') {
-      logger.warn('收到未知类型的消息:', wsMessage.type);
-      return null;
-    }
-
-    // 验证必填字段
-    if (!wsMessage.digitalHumanId || !wsMessage.senderId || !wsMessage.content) {
-      logger.warn('消息缺少必填字段:', wsMessage);
-      return null;
-    }
-
-    // 转换为标准消息格式
-    const message: PowPowMessage = {
-      id: wsMessage.messageId,
-      digitalHumanId: wsMessage.digitalHumanId,
-      senderType: 'user', // 入站消息来自用户
-      senderId: wsMessage.senderId,
-      senderName: wsMessage.senderId, // 暂时使用 senderId 作为名称
-      content: wsMessage.content,
-      contentType: wsMessage.contentType || 'text',
-      mediaUrl: wsMessage.mediaUrl,
-      duration: wsMessage.duration,
-      timestamp: wsMessage.timestamp ? new Date(wsMessage.timestamp).toISOString() : new Date().toISOString(),
-      isRead: false,
-    };
-
-    logger.debug('消息标准化完成:', message);
-    return message;
-  } catch (error) {
-    logger.error('标准化消息失败:', error);
+export function normalizeDbRow(row: DialogueDbRow): NormalizedInbound | null {
+  if (row.role !== 'user') {
     return null;
   }
+  if (!row.content) {
+    logger.debug('入站消息 content 为空，忽略');
+    return null;
+  }
+
+  const metadata = row.metadata || {};
+  const senderId = readString(metadata.sender_id) || row.userId || 'unknown';
+
+  return {
+    messageId: row.id,
+    sessionId: row.sessionId,
+    digitalHumanId: row.digitalHumanId,
+    senderId,
+    senderName: senderId,
+    content: row.content,
+    contentType: detectContentType(metadata),
+    timestamp: new Date(row.createdAt).getTime() || Date.now(),
+    raw: row,
+  };
+}
+
+/**
+ * 标准化 chat/history 返回的消息
+ */
+export function normalizeHistoryMessage(message: HistoryMessage): NormalizedInbound | null {
+  if (message.role !== 'user') {
+    return null;
+  }
+  if (!message.content) {
+    return null;
+  }
+
+  const metadata = message.metadata || {};
+  const senderId = readString(metadata.sender_id) || readString(metadata.openclaw_user_id) || 'unknown';
+
+  return {
+    messageId: message.id,
+    sessionId: message.sessionId,
+    digitalHumanId: '',
+    senderId,
+    senderName: senderId,
+    content: message.content,
+    contentType: detectContentType(metadata),
+    timestamp: new Date(message.timestamp).getTime() || Date.now(),
+    raw: message,
+  };
 }
 
 /**
  * 提取消息文本内容（用于 AI 处理）
  */
-export function extractMessageContent(message: PowPowMessage): string {
-  // 对于文本消息，直接返回内容
-  if (message.contentType === 'text') {
-    return message.content;
-  }
-
-  // 对于多媒体消息，添加描述
-  switch (message.contentType) {
+export function extractMessageContent(contentType: PowPowContentType, content: string, duration?: number): string {
+  switch (contentType) {
     case 'image':
-      return `[图片] ${message.content}`;
+      return `[图片] ${content}`;
     case 'voice':
-      return `[语音 ${message.duration || 0}秒] ${message.content}`;
+      return `[语音 ${duration || 0}秒] ${content}`;
     case 'video':
-      return `[视频 ${message.duration || 0}秒] ${message.content}`;
+      return `[视频 ${duration || 0}秒] ${content}`;
     default:
-      return message.content;
+      return content;
   }
 }
 
-/**
- * 验证消息是否应该被处理（访问控制）
- */
-export function shouldProcessMessage(
-  message: PowPowMessage,
-  allowFrom?: string[]
-): boolean {
-  // 如果没有配置白名单，允许所有消息
-  if (!allowFrom || allowFrom.length === 0) {
-    return true;
-  }
+function readString(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
 
-  // 检查发送者是否在白名单中
-  return allowFrom.includes(message.senderId);
+function detectContentType(metadata: Record<string, unknown>): PowPowContentType {
+  const type = readString(metadata.content_type) || readString(metadata.contentType);
+  if (type === 'image' || type === 'voice' || type === 'video') {
+    return type;
+  }
+  return 'text';
 }

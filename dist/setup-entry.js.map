@@ -1,0 +1,1 @@
+{"version":3,"file":"setup-entry.js","sourceRoot":"","sources":["../src/setup-entry.ts"],"names":[],"mappings":"AAAA;;GAEG;AAEH,OAAO,EAAE,8BAA8B,EAAE,MAAM,4CAA4C,CAAC;AAE5F,MAAM,gBAAgB,GAAG,8BAA8B,CAAC;IACtD,aAAa,EAAE,MAAM,CAAC,IAAI,CAAC,GAAG;IAC9B,MAAM,EAAE;QACN,SAAS,EAAE,uBAAuB;QAClC,UAAU,EAAE,mBAAmB;KAChC;CACF,CAAC,CAAC;AAEH,eAAe,gBAAgB,CAAC"}

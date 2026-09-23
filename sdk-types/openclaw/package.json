@@ -1,0 +1,6 @@
+{
+  "name": "openclaw",
+  "version": "2026.9.5",
+  "types": "./index.d.ts",
+  "private": true
+}

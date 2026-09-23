@@ -1,7 +1,7 @@
 {
   "name": "@durenzidu/openclaw-channel-powpow",
-  "version": "1.0.2",
-  "description": "PowPow map channel plugin for OpenClaw - Real-time bidirectional communication",
+  "version": "1.2.0",
+  "description": "PowPow map digital-human chat channel plugin for OpenClaw - Supabase Realtime + history polling inbound, webhook reply outbound",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,27 +12,111 @@
     }
   },
   "openclaw": {
+    "extensions": [
+      "./src/index.ts"
+    ],
+    "setupEntry": "./dist/setup-entry.js",
+    "channel": {
+      "id": "powpow",
+      "label": "PowPow",
+      "selectionLabel": "PowPow (map digital human)",
+      "docsPath": "/channels/powpow",
+      "docsLabel": "powpow",
+      "blurb": "Chat as a PowPow map digital human.",
+      "order": 100,
+      "quickstartAllowFrom": true,
+      "setup": {
+        "fields": [
+          {
+            "key": "digitalHumanId",
+            "kind": "string",
+            "cli": {
+              "flags": "--digital-human-id <id>",
+              "description": "PowPow digital human UUID"
+            }
+          },
+          {
+            "key": "webhookToken",
+            "kind": "string",
+            "sensitive": true,
+            "cli": {
+              "flags": "--webhook-token <token>",
+              "description": "PowPow webhook token"
+            }
+          },
+          {
+            "key": "useEnvToken",
+            "kind": "boolean",
+            "cli": {
+              "flags": "--use-env-token",
+              "description": "Use POWPOW_WEBHOOK_TOKEN"
+            },
+            "envVars": [
+              "POWPOW_WEBHOOK_TOKEN"
+            ]
+          },
+          {
+            "key": "apiBaseUrl",
+            "kind": "string",
+            "cli": {
+              "flags": "--api-base-url <url>",
+              "description": "PowPow API base URL"
+            }
+          },
+          {
+            "key": "supabaseUrl",
+            "kind": "string",
+            "cli": {
+              "flags": "--supabase-url <url>",
+              "description": "Supabase project URL (enables realtime inbound)"
+            }
+          },
+          {
+            "key": "supabaseAnonKey",
+            "kind": "string",
+            "cli": {
+              "flags": "--supabase-anon-key <key>",
+              "description": "Supabase anon key"
+            }
+          }
+        ]
+      }
+    },
+    "install": {
+      "clawhubSpec": "clawhub:@durenzidu/openclaw-channel-powpow",
+      "npmSpec": "@durenzidu/openclaw-channel-powpow",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.9.5"
+    },
     "compat": {
-      "pluginApi": "1.0.0"
+      "pluginApi": ">=2026.9.5"
     },
     "build": {
-      "openclawVersion": "2026.3.24"
+      "openclawVersion": "2026.9.5"
     },
-    "extensions": ["channel"]
+    "release": {
+      "publishToClawHub": true,
+      "publishToNpm": true
+    },
+    "runtimeExtensions": [
+      "./dist/index.js"
+    ],
+    "runtimeSetupEntry": "./dist/setup-entry.js"
   },
   "files": [
     "dist",
+    "src",
+    "assets",
     "README.md",
     "LICENSE",
+    "CHANGELOG.md",
     "openclaw.plugin.json"
   ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
-    "test": "vitest",
-    "clean": "rm -rf dist"
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "keywords": [
     "openclaw",
@@ -40,7 +124,8 @@
     "powpow",
     "map",
     "digital-human",
-    "websocket"
+    "supabase",
+    "realtime"
   ],
   "author": "durenzidu",
   "license": "MIT",
@@ -51,21 +136,20 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "peerDependencies": {
+    "openclaw": ">=2026.9.5"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
   "dependencies": {
-    "ws": "^8.16.0",
-    "zod": "^3.22.4"
+    "@supabase/supabase-js": "^2.45.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
-    "@types/ws": "^8.5.10",
     "typescript": "^5.3.0"
-  },
-  "peerDependencies": {
-    "@openclaw/core": ">=1.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@openclaw/core": {
-      "optional": true
-    }
   }
 }

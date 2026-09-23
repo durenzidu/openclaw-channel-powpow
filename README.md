@@ -1,318 +1,123 @@
-# OpenClaw PowPow Channel Plugin
+# @durenzidu/openclaw-channel-powpow
 
-PowPow 地图实时通信渠道插件，用于 OpenClaw 与 PowPow 数字人的双向实时消息传递。
+PowPow 地图通信渠道插件 —— 让 OpenClaw 扮演 [PowPow](https://global.powpow.online) 地图上的数字人，与地图访客实时对话。
 
-## 功能特性
+## 架构（v1.2.0，标准 OpenClaw channel 插件）
 
-- ✅ **实时通信** - 基于 WebSocket 的双向实时消息传输
-- ✅ **流式输出** - 支持 AI 流式回复，实时传递
-- ✅ **多媒体支持** - 文本、图片、语音、视频消息
-- ✅ **自动重连** - 连接断开后自动重连（指数退避）
-- ✅ **消息队列** - 离线时消息自动排队
-- ✅ **多实例支持** - 支持多个数字人同时在线
-- ✅ **访问控制** - 支持白名单/黑名单策略
-- ✅ **Markdown 支持** - 支持 Markdown 格式回复
+PowPow 平台运行于 Vercel serverless + Supabase 架构，不提供常驻 WebSocket 端点（旧版 `wss://global.powpow.online:8080` 已下线）。本插件按官方 channel plugin 规范（`@openclaw/nostr` 同款组装方式）实现：
+
+```
+用户（PowPow 地图聊天）
+   │  POST /api/openclaw/chat/send（平台落库 digital_human_dialogues）
+   ▼
+┌─────────────────────────────────────────────┐
+│ 收信（两条链路，消息 ID 去重）                  │
+│  1. Supabase Realtime：订阅 digital_human_   │
+│     dialogues INSERT（role='user'，毫秒级）   │
+│  2. 轮询兜底：GET /api/openclaw/chat/history  │
+│     （默认 5s，Realtime 断连时自动降级）        │
+└─────────────────────────────────────────────┘
+   │  dispatchInboundDirectDm → OpenClaw agent
+   ▼
+┌─────────────────────────────────────────────┐
+│ 回信                                          │
+│  POST /api/openclaw/webhook/receive           │
+│  （webhook_token 鉴权，携带 session_id 续会话， │
+│   失败指数退避重试，4xx 快速失败）               │
+└─────────────────────────────────────────────┘
+```
+
+特点：
+- **标准插件接口**：`defineBundledChannelEntry` 入口、`runPassiveAccountLifecycle` 账号生命周期、`resolveStableChannelMessageIngress` DM 访问控制、CLI setup 向导
+- **无需公网端点**：agent 只发起出站连接（Supabase Realtime + 平台 HTTPS API），本机/NAT 环境直接可用
+- **双链路收信**：Realtime 主链路毫秒级，轮询兜底保证 Realtime 故障时消息不丢
+- **重启安全**：启动时建立基线，不会回复历史消息
+- **DM 访问控制**：复用 OpenClaw 统一策略（`open` / `allowlist` / `pairing` / `disabled`）
 
 ## 安装
 
 ```bash
-openclaw plugins install @soimy/openclaw-channel-powpow
+openclaw plugins install @durenzidu/openclaw-channel-powpow
 ```
 
-或者从源码安装：
+安装后按 CLI setup 向导配置（或直接编辑 `channels.powpow` 配置节）：
 
-```bash
-git clone https://github.com/soimy/openclaw-channel-powpow.git
-cd openclaw-channel-powpow
-npm install
-npm run build
-openclaw plugins install -l .
+```
+--digital-human-id <id>     PowPow 数字人 UUID
+--webhook-token <token>     webhook token（敏感字段）
+--use-env-token             改用环境变量 POWPOW_WEBHOOK_TOKEN
+--api-base-url <url>        平台 API 地址（默认 https://global.powpow.online）
+--supabase-url <url>        Supabase 项目 URL（启用 Realtime 收信）
+--supabase-anon-key <key>   Supabase anon key
 ```
 
-## 快速开始
-
-### 1. 使用 CLI 配置
-
-```bash
-openclaw configure --section channels
-```
-
-### 2. 手动配置
-
-在 `~/.openclaw/openclaw.json` 中添加配置：
+## 配置
 
 ```json
 {
-  "channels": {
-    "powpow": {
-      "enabled": true,
-      "accounts": [
-        {
-          "id": "account_001",
-          "digitalHumanId": "your-digital-human-id",
-          "name": "OpenClaw 助手",
-          "wsUrl": "wss://global.powpow.online:8080",
-          "dmPolicy": "open",
-          "messageType": "markdown"
-        }
-      ],
-      "advanced": {
-        "autoReconnect": true,
-        "reconnectInterval": 3000,
-        "maxMessageLength": 2000,
-        "enableStreaming": true,
-        "debug": false
-      }
-    }
-  }
+  "enabled": true,
+  "apiBaseUrl": "https://global.powpow.online",
+  "digitalHumanId": "<数字人 ID（UUID）>",
+  "webhookToken": "<平台为该数字人配置的 webhook token>",
+  "supabaseUrl": "https://<你的 PowPow 平台 Supabase 项目>.supabase.co",
+  "supabaseAnonKey": "<Supabase anon key>",
+  "dmPolicy": "open",
+  "allowFrom": [],
+  "pollEnabled": true,
+  "pollIntervalMs": 5000,
+  "historyLimit": 50,
+  "requestTimeoutMs": 10000,
+  "maxRetries": 3,
+  "maxMessageLength": 2000
 }
 ```
 
-### 3. 重启 OpenClaw
+### 配置项从哪里拿
 
-```bash
-openclaw gateway restart
-```
+| 配置项 | 获取方式 |
+|---|---|
+| `digitalHumanId` | PowPow 平台个人中心 → 我的数字人；或平台数据库 `user_digital_humans.id` |
+| `webhookToken` | PowPow 平台数字人 webhook 设置页；或平台数据库 `digital_human_webhooks.webhook_token` |
+| `supabaseUrl` / `supabaseAnonKey` | PowPow 平台的 Supabase 控制台 → Settings → API（anon key 是公开密钥） |
+| `apiBaseUrl` | 平台部署地址，默认 `https://global.powpow.online` |
 
-## 配置说明
+## 平台侧前提条件
 
-### 账号配置 (accounts)
+1. **Supabase Realtime 已启用**：`digital_human_dialogues` 表需加入 Realtime publication，且 RLS 策略允许订阅该表的 INSERT 事件（平台管理员在 Supabase 控制台操作）
+2. **webhook 已配置**：平台 `chat/send` 接口要求数字人存在 active 状态的 webhook 配置才会接受用户消息（`digital_human_webhooks` 表有记录且 status='active'）。webhookUrl 指向何处不影响本插件收信（收信走 Realtime/轮询），但缺失会导致用户发消息直接被平台拒绝
+3. **数字人处于活跃状态**：`user_digital_humans.is_active = true`
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | string | 是 | 账号唯一标识 |
-| `digitalHumanId` | string | 是 | PowPow 数字人 ID |
-| `name` | string | 是 | 账号名称 |
-| `wsUrl` | string | 否 | WebSocket 地址，默认 `wss://global.powpow.online:8080` |
-| `dmPolicy` | string | 否 | 私聊策略：`open`/`allowlist`/`blocklist`，默认 `open` |
-| `allowFrom` | string[] | 否 | 白名单/黑名单用户 ID 列表 |
-| `messageType` | string | 否 | 消息类型：`text`/`markdown`，默认 `markdown` |
+## 已知限制
 
-### 高级配置 (advanced)
+- **媒体回复降级为文本**：平台 `webhook/receive` 接口以纯文本存储回复，图片/语音/视频回复会以 `[图片] url` 形式的文本发出
+- **多媒体接收**：用户消息中的图片/语音/视频以描述文本呈现（平台会话表仅存文本内容）
+- **不支持流式输出**：平台暂无流式回复接口，`supportsStreaming` 为 false
+- **离线消息**：插件停止期间的消息不会补回复（重启基线会跳过历史消息）
 
-| 字段 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `autoReconnect` | boolean | `true` | 自动重连 |
-| `reconnectInterval` | number | `3000` | 重连间隔（毫秒） |
-| `maxReconnectAttempts` | number | `10` | 最大重连次数 |
-| `maxMessageLength` | number | `2000` | 最大消息长度 |
-| `enableStreaming` | boolean | `true` | 启用流式输出 |
-| `enableCards` | boolean | `false` | 启用 AI 卡片（实验性） |
-| `debug` | boolean | `false` | 调试模式（详细日志） |
+## 从旧版本迁移
 
-## 使用示例
+- **v1.0.x**：通过常驻 WebSocket（`wss://global.powpow.online:8080`）收发消息，该端点已随平台 serverless 化下线，**旧版本已完全失效**
+- **v1.1.x**：仅实现通信层，未接入 OpenClaw plugin-sdk 接口层，无法被 OpenClaw 2026.9.5 运行时加载为 channel 插件
+- 迁移步骤：
 
-### 单账号配置
-
-```json
-{
-  "channels": {
-    "powpow": {
-      "enabled": true,
-      "accounts": [
-        {
-          "id": "dh_main",
-          "digitalHumanId": "your-digital-human-id",
-          "name": "主数字人",
-          "dmPolicy": "open"
-        }
-      ]
-    }
-  }
-}
-```
-
-### 多账号配置
-
-```json
-{
-  "channels": {
-    "powpow": {
-      "enabled": true,
-      "accounts": [
-        {
-          "id": "dh_001",
-          "digitalHumanId": "dh_id_001",
-          "name": "客服助手",
-          "dmPolicy": "open"
-        },
-        {
-          "id": "dh_002",
-          "digitalHumanId": "dh_id_002",
-          "name": "导游助手",
-          "dmPolicy": "allowlist",
-          "allowFrom": ["user_vip_001", "user_vip_002"]
-        }
-      ]
-    }
-  }
-}
-```
-
-### 白名单配置
-
-```json
-{
-  "channels": {
-    "powpow": {
-      "enabled": true,
-      "accounts": [
-        {
-          "id": "dh_vip",
-          "digitalHumanId": "your-digital-human-id",
-          "name": "VIP 专属助手",
-          "dmPolicy": "allowlist",
-          "allowFrom": ["user_001", "user_002", "user_003"]
-        }
-      ]
-    }
-  }
-}
-```
-
-## 消息类型支持
-
-| 类型 | 支持 | 说明 |
-|------|------|------|
-| 文本 | ✅ | 支持 Markdown 格式 |
-| 图片 | ✅ | JPEG, PNG, GIF |
-| 语音 | ✅ | MP3 格式 |
-| 视频 | ✅ | MP4 格式 |
-| AI 卡片 | 🚧 | 实验性支持 |
-
-## 访问策略
-
-### open（开放）
-允许所有用户发送消息
-
-### allowlist（白名单）
-只允许指定用户发送消息
-
-### blocklist（黑名单）
-拒绝指定用户发送消息
-
-## 故障排查
-
-### 连接失败
-
-**问题**: 无法连接到 WebSocket
-
-**解决方案**:
-1. 检查 `wsUrl` 配置是否正确
-2. 确认网络连接正常
-3. 检查防火墙设置
-4. 查看日志：`openclaw logs | grep powpow`
-
-### 消息发送失败
-
-**问题**: 消息发送失败
-
-**解决方案**:
-1. 确认连接状态：`openclaw status`
-2. 检查数字人 ID 是否正确
-3. 查看错误日志
-
-### 收不到消息
-
-**问题**: 用户发送消息但没有响应
-
-**解决方案**:
-1. 确认 Channel 已启用
-2. 检查访问策略配置
-3. 查看 OpenClaw AI 是否正常工作
-4. 检查 WebSocket 连接状态
+1. 升级插件到 1.2.0（`openclaw plugins update @durenzidu/openclaw-channel-powpow`）
+2. 配置改为 `channels.powpow` 顶层单账号结构（删除 `accounts[]` / `advanced` / `wsUrl` 旧字段）
+3. 确认平台侧前提条件（见上）
 
 ## 开发
 
-### 本地开发
-
 ```bash
-# 克隆仓库
-git clone https://github.com/soimy/openclaw-channel-powpow.git
-cd openclaw-channel-powpow
-
-# 安装依赖
 npm install
-
-# 构建
-npm run build
-
-# 类型检查
+npm run build      # tsc 编译到 dist/
 npm run type-check
 
-# 监听模式
-npm run dev
+# 冒烟测试（mock PowPow 服务端端到端）
+node --import ./smoke/register-hooks.mjs smoke/smoke-test.mjs
+
+# ClawHub 校验
+clawhub package validate . --openclaw-version 2026.9.5
 ```
 
-### 测试
+## License
 
-```bash
-# 运行测试
-npm test
-```
-
-## 架构说明
-
-```
-┌─────────────────────────────────────────┐
-│          OpenClaw Gateway               │
-│    (会话管理、AI 路由、消息调度)          │
-└──────────────┬──────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────┐
-│         PowPow Channel Plugin           │
-├─────────────────────────────────────────┤
-│  ┌─────────────────────────────────┐    │
-│  │  Gateway (WebSocket 连接管理)    │    │
-│  │  - 连接建立/断开                 │    │
-│  │  - 自动重连                      │    │
-│  │  - 心跳机制                      │    │
-│  └─────────────────────────────────┘    │
-│  ┌─────────────────────────────────┐    │
-│  │  Messaging (消息处理)           │    │
-│  │  - 入站消息标准化                │    │
-│  │  - 出站消息发送                  │    │
-│  │  - 访问控制                      │    │
-│  └─────────────────────────────────┘    │
-│  ┌─────────────────────────────────┐    │
-│  │  Config (配置管理)              │    │
-│  │  - 配置加载/验证                 │    │
-│  │  - 账号管理                      │    │
-│  └─────────────────────────────────┘    │
-└──────────────┬──────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────┐
-│         PowPow 地图平台                  │
-│    (WebSocket + REST API)               │
-└─────────────────────────────────────────┘
-```
-
-## 与 Skill 的区别
-
-| 功能 | Channel 插件 | Skill |
-|------|------------|-------|
-| **实时通信** | ✅ 负责 | ❌ 不负责 |
-| **消息路由** | ✅ 负责 | ❌ 不负责 |
-| **AI 回复** | ✅ 负责 | ❌ 不负责 |
-| **数字人创建** | ❌ 不负责 | ✅ 负责 |
-| **位置控制** | ❌ 不负责 | ✅ 负责 |
-| **地图交互** | ❌ 不负责 | ✅ 负责 |
-
-**简单说**：
-- **Channel** = 通信员（负责传话）
-- **Skill** = 管理员（负责管理数字人）
-
-## 许可证
-
-MIT License
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 联系方式
-
-- GitHub: dongtao@outlook.com
-- 项目地址：https://github.com/soimy/openclaw-channel-powpow
+MIT © durenzidu
