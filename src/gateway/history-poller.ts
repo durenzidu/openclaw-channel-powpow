@@ -1,7 +1,6 @@
 /**
  * chat/history 轮询器
- * 作为 Supabase Realtime 的兜底链路：定期拉取数字人的会话历史，
- * 增量分发新出现的用户消息；Realtime 正常时也保持低频兜底
+ * 插件的唯一收信链路：定期拉取数字人的会话历史，增量分发新出现的用户消息
  */
 
 import type { HistoryMessage } from '../types.js';
@@ -23,6 +22,7 @@ export class HistoryPoller {
   private timer: ReturnType<typeof setInterval> | null = null;
   private polling = false;
   private running = false;
+  private baselineReady = false;
 
   constructor(options: HistoryPollerOptions) {
     this.opts = options;
@@ -30,7 +30,9 @@ export class HistoryPoller {
 
   /**
    * 建立基线：拉取一次历史并把所有消息 ID 交给回调标记为已见，
-   * 避免插件重启后回复历史消息；之后按间隔轮询增量
+   * 避免插件重启后回复历史消息；基线建立前轮询不分发。
+   * 基线失败不阻塞启动，改为异步指数退避重试（封顶 30s），
+   * 防止首拉失败时把全部历史消息当新消息分发（迟到回复风暴）。
    */
   async start(baselineIds: (ids: string[]) => void): Promise<void> {
     if (this.running) {
@@ -38,15 +40,7 @@ export class HistoryPoller {
     }
     this.running = true;
 
-    try {
-      const messages = await this.fetchHistory();
-      baselineIds(messages.map((m) => m.id));
-      logger.debug(
-        `账号 ${this.opts.accountId} 轮询基线建立：${messages.length} 条历史消息`
-      );
-    } catch (error) {
-      logger.warn(`账号 ${this.opts.accountId} 轮询基线建立失败（首次轮询将全量分发）:`, error);
-    }
+    void this.establishBaseline(baselineIds, 0);
 
     this.timer = setInterval(() => {
       void this.poll();
@@ -55,6 +49,7 @@ export class HistoryPoller {
 
   stop(): void {
     this.running = false;
+    this.baselineReady = false;
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
@@ -65,8 +60,41 @@ export class HistoryPoller {
     return this.running;
   }
 
+  private async establishBaseline(
+    baselineIds: (ids: string[]) => void,
+    delayMs: number
+  ): Promise<void> {
+    if (!this.running) {
+      return;
+    }
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    if (!this.running) {
+      return;
+    }
+    try {
+      const messages = await this.fetchHistory();
+      baselineIds(messages.map((m) => m.id));
+      this.baselineReady = true;
+      logger.debug(
+        `账号 ${this.opts.accountId} 轮询基线建立：${messages.length} 条历史消息`
+      );
+    } catch (error) {
+      const nextDelay = Math.min((delayMs || 1000) * 2, 30000);
+      logger.warn(
+        `账号 ${this.opts.accountId} 轮询基线建立失败，${nextDelay}ms 后重试（基线就绪前不分发）:`,
+        error
+      );
+      await this.establishBaseline(baselineIds, nextDelay);
+    }
+  }
+
   private async poll(): Promise<void> {
     if (this.polling) {
+      return;
+    }
+    if (!this.baselineReady) {
       return;
     }
     this.polling = true;

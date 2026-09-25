@@ -1,1 +1,1 @@
-{"version":3,"file":"channel-plugin-api.d.ts","sourceRoot":"","sources":["../src/channel-plugin-api.ts"],"names":[],"mappings":"AAAA;;;GAGG;AA8CH,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,YAAY,CAAC;AA2JhD,eAAO,MAAM,YAAY,gFAwEvB,CAAC"}
+{"version":3,"file":"channel-plugin-api.d.ts","sourceRoot":"","sources":["../src/channel-plugin-api.ts"],"names":[],"mappings":"AAAA;;;GAGG;AA8CH,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,YAAY,CAAC;AAyJhD,eAAO,MAAM,YAAY,gFAwEvB,CAAC"}

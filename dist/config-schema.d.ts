@@ -11,8 +11,6 @@ export declare const PowPowConfigSchema: z.ZodObject<{
     apiBaseUrl: z.ZodOptional<z.ZodString>;
     digitalHumanId: z.ZodOptional<z.ZodString>;
     webhookToken: z.ZodOptional<z.ZodString>;
-    supabaseUrl: z.ZodOptional<z.ZodString>;
-    supabaseAnonKey: z.ZodOptional<z.ZodString>;
     dmPolicy: z.ZodOptional<z.ZodEnum<{
         allowlist: "allowlist";
         disabled: "disabled";
@@ -20,7 +18,6 @@ export declare const PowPowConfigSchema: z.ZodObject<{
         pairing: "pairing";
     }>>;
     allowFrom: z.ZodOptional<z.ZodOptional<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>>;
-    realtimeEnabled: z.ZodOptional<z.ZodBoolean>;
     pollEnabled: z.ZodOptional<z.ZodBoolean>;
     pollIntervalMs: z.ZodOptional<z.ZodNumber>;
     historyLimit: z.ZodOptional<z.ZodNumber>;

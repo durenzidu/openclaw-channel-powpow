@@ -41,8 +41,6 @@ export function resolvePowpowAccount(params) {
         apiBaseUrl: section?.apiBaseUrl?.trim() || DEFAULT_API_BASE_URL,
         digitalHumanId,
         webhookToken,
-        supabaseUrl: section?.supabaseUrl?.trim() || undefined,
-        supabaseAnonKey: section?.supabaseAnonKey?.trim() || undefined,
         config: section ?? {},
     };
 }

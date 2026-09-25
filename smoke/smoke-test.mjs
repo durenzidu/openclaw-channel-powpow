@@ -45,8 +45,6 @@ function makeContext(server, { webhookToken = "tok-abc", dmPolicy = "open", allo
       apiBaseUrl: server.baseUrl,
       digitalHumanId: DH_ID,
       webhookToken,
-      supabaseUrl: "",
-      supabaseAnonKey: "",
       config: {
         pollEnabled: true,
         pollIntervalMs: POLL_MS,

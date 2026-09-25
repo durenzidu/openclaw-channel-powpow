@@ -56,8 +56,6 @@ const powpowConfigAdapter = createTopLevelChannelConfigAdapter({
         "digitalHumanId",
         "webhookToken",
         "apiBaseUrl",
-        "supabaseUrl",
-        "supabaseAnonKey",
         "dmPolicy",
         "allowFrom",
     ],
@@ -158,7 +156,7 @@ export const powpowPlugin = createChatChannelPlugin({
             selectionLabel: "PowPow",
             docsPath: "/channels/powpow",
             docsLabel: "powpow",
-            blurb: "Chat as a PowPow map digital human (realtime + polling inbound, webhook reply)",
+            blurb: "Chat as a PowPow map digital human (polling inbound, webhook reply)",
             order: 100,
         },
         capabilities: {

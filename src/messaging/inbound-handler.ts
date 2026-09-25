@@ -5,40 +5,10 @@
  */
 
 import type {
-  DialogueDbRow,
   HistoryMessage,
   NormalizedInbound,
   PowPowContentType,
 } from '../types.js';
-import { logger } from '../shared/logger.js';
-
-/**
- * 标准化 Realtime 推送的数据库行
- */
-export function normalizeDbRow(row: DialogueDbRow): NormalizedInbound | null {
-  if (row.role !== 'user') {
-    return null;
-  }
-  if (!row.content) {
-    logger.debug('入站消息 content 为空，忽略');
-    return null;
-  }
-
-  const metadata = row.metadata || {};
-  const senderId = readString(metadata.sender_id) || row.userId || 'unknown';
-
-  return {
-    messageId: row.id,
-    sessionId: row.sessionId,
-    digitalHumanId: row.digitalHumanId,
-    senderId,
-    senderName: senderId,
-    content: row.content,
-    contentType: detectContentType(metadata),
-    timestamp: new Date(row.createdAt).getTime() || Date.now(),
-    raw: row,
-  };
-}
 
 /**
  * 标准化 chat/history 返回的消息

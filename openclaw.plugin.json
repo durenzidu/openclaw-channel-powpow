@@ -4,7 +4,7 @@
     "channels"
   ],
   "name": "PowPow",
-  "description": "PowPow map digital-human chat channel plugin for OpenClaw: Supabase Realtime + history polling inbound, webhook reply outbound.",
+  "description": "PowPow map digital-human chat channel plugin for OpenClaw: history polling inbound, webhook reply outbound, two-way messaging with map visitors.",
   "activation": {
     "onStartup": false
   },
@@ -40,12 +40,6 @@
           "webhookToken": {
             "type": "string"
           },
-          "supabaseUrl": {
-            "type": "string"
-          },
-          "supabaseAnonKey": {
-            "type": "string"
-          },
           "dmPolicy": {
             "type": "string",
             "enum": [
@@ -63,9 +57,6 @@
                 "number"
               ]
             }
-          },
-          "realtimeEnabled": {
-            "type": "boolean"
           },
           "pollEnabled": {
             "type": "boolean"
@@ -115,9 +106,10 @@
     "powpow",
     "map",
     "digital-human",
-    "supabase",
-    "realtime",
-    "communication"
+    "communication",
+    "messaging",
+    "chat",
+    "polling"
   ],
   "clawhub": {
     "tags": [
@@ -125,15 +117,13 @@
       "powpow",
       "map",
       "digital-human",
-      "supabase",
-      "realtime"
+      "messaging",
+      "chat"
     ],
     "features": [
-      "Supabase Realtime 实时收信（毫秒级）",
-      "chat/history 轮询兜底（Realtime 断连自动降级）",
+      "chat/history 轮询收信（3~5 秒级延迟，断线自动重试）",
       "webhook 接口回信（带会话续接与重试）",
-      "多媒体消息接收（文本/图片/语音描述）",
-      "访问控制（open/allowlist/pairing/disabled）",
+      "访客身份访问控制（open/allowlist/pairing/disabled）",
       "CLI setup 向导（--digital-human-id/--webhook-token 等）"
     ],
     "documentation": "README.md"

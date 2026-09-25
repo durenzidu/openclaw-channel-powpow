@@ -3,16 +3,6 @@
  */
 import type { ChannelDmPolicy } from "openclaw/plugin-sdk/channel-config-helpers";
 export type PowPowContentType = "text" | "image" | "voice" | "video";
-export interface DialogueDbRow {
-    id: string;
-    sessionId: string;
-    digitalHumanId: string;
-    userId: string;
-    role: string;
-    content: string;
-    metadata: Record<string, unknown> | null;
-    createdAt: string;
-}
 export interface HistoryMessage {
     id: string;
     sessionId: string;
@@ -41,11 +31,8 @@ export interface PowPowAccountConfig {
     apiBaseUrl?: string;
     digitalHumanId?: string;
     webhookToken?: string;
-    supabaseUrl?: string;
-    supabaseAnonKey?: string;
     dmPolicy?: ChannelDmPolicy;
     allowFrom?: Array<string | number>;
-    realtimeEnabled?: boolean;
     pollEnabled?: boolean;
     pollIntervalMs?: number;
     historyLimit?: number;
@@ -61,8 +48,6 @@ export interface PowPowAccount {
     apiBaseUrl: string;
     digitalHumanId: string;
     webhookToken: string;
-    supabaseUrl?: string;
-    supabaseAnonKey?: string;
     config: PowPowAccountConfig;
 }
 //# sourceMappingURL=types.d.ts.map

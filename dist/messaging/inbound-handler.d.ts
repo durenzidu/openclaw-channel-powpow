@@ -3,11 +3,7 @@
  * 将 digital_human_dialogues 的行（Realtime snake_case / history camelCase）
  * 标准化为 OpenClaw 入站消息
  */
-import type { DialogueDbRow, HistoryMessage, NormalizedInbound, PowPowContentType } from '../types.js';
-/**
- * 标准化 Realtime 推送的数据库行
- */
-export declare function normalizeDbRow(row: DialogueDbRow): NormalizedInbound | null;
+import type { HistoryMessage, NormalizedInbound, PowPowContentType } from '../types.js';
 /**
  * 标准化 chat/history 返回的消息
  */

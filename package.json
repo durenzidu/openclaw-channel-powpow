@@ -1,7 +1,7 @@
 {
   "name": "@durenzidu/openclaw-channel-powpow",
-  "version": "1.2.0",
-  "description": "PowPow map digital-human chat channel plugin for OpenClaw - Supabase Realtime + history polling inbound, webhook reply outbound",
+  "version": "1.2.1",
+  "description": "PowPow map digital-human chat channel plugin for OpenClaw - history polling inbound, webhook reply outbound, two-way messaging with map visitors",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -62,22 +62,6 @@
               "flags": "--api-base-url <url>",
               "description": "PowPow API base URL"
             }
-          },
-          {
-            "key": "supabaseUrl",
-            "kind": "string",
-            "cli": {
-              "flags": "--supabase-url <url>",
-              "description": "Supabase project URL (enables realtime inbound)"
-            }
-          },
-          {
-            "key": "supabaseAnonKey",
-            "kind": "string",
-            "cli": {
-              "flags": "--supabase-anon-key <key>",
-              "description": "Supabase anon key"
-            }
           }
         ]
       }
@@ -124,8 +108,10 @@
     "powpow",
     "map",
     "digital-human",
-    "supabase",
-    "realtime"
+    "communication",
+    "messaging",
+    "chat",
+    "polling"
   ],
   "author": "durenzidu",
   "license": "MIT",
@@ -145,7 +131,6 @@
     }
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

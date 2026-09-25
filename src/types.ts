@@ -7,18 +7,6 @@ import type { ChannelDmPolicy } from "openclaw/plugin-sdk/channel-config-helpers
 // PowPow 消息内容类型
 export type PowPowContentType = "text" | "image" | "voice" | "video";
 
-// Supabase Realtime 推送的 digital_human_dialogues 行（Postgres 原生 snake_case）
-export interface DialogueDbRow {
-  id: string;
-  sessionId: string;
-  digitalHumanId: string;
-  userId: string;
-  role: string;
-  content: string;
-  metadata: Record<string, unknown> | null;
-  createdAt: string;
-}
-
 // chat/history 接口返回的消息（HTTP camelCase）
 export interface HistoryMessage {
   id: string;
@@ -52,11 +40,8 @@ export interface PowPowAccountConfig {
   apiBaseUrl?: string;
   digitalHumanId?: string;
   webhookToken?: string;
-  supabaseUrl?: string;
-  supabaseAnonKey?: string;
   dmPolicy?: ChannelDmPolicy;
   allowFrom?: Array<string | number>;
-  realtimeEnabled?: boolean;
   pollEnabled?: boolean;
   pollIntervalMs?: number;
   historyLimit?: number;
@@ -74,7 +59,5 @@ export interface PowPowAccount {
   apiBaseUrl: string;
   digitalHumanId: string;
   webhookToken: string;
-  supabaseUrl?: string;
-  supabaseAnonKey?: string;
   config: PowPowAccountConfig;
 }

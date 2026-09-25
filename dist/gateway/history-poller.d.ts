@@ -1,7 +1,6 @@
 /**
  * chat/history 轮询器
- * 作为 Supabase Realtime 的兜底链路：定期拉取数字人的会话历史，
- * 增量分发新出现的用户消息；Realtime 正常时也保持低频兜底
+ * 插件的唯一收信链路：定期拉取数字人的会话历史，增量分发新出现的用户消息
  */
 import type { HistoryMessage } from '../types.js';
 export interface HistoryPollerOptions {
@@ -19,14 +18,18 @@ export declare class HistoryPoller {
     private timer;
     private polling;
     private running;
+    private baselineReady;
     constructor(options: HistoryPollerOptions);
     /**
      * 建立基线：拉取一次历史并把所有消息 ID 交给回调标记为已见，
-     * 避免插件重启后回复历史消息；之后按间隔轮询增量
+     * 避免插件重启后回复历史消息；基线建立前轮询不分发。
+     * 基线失败不阻塞启动，改为异步指数退避重试（封顶 30s），
+     * 防止首拉失败时把全部历史消息当新消息分发（迟到回复风暴）。
      */
     start(baselineIds: (ids: string[]) => void): Promise<void>;
     stop(): void;
     isRunning(): boolean;
+    private establishBaseline;
     private poll;
     /**
      * chat/history 按 asc + limit 排序，直接拉取会得到最旧的 N 条。

@@ -1,6 +1,6 @@
 /**
  * PowPow 网关账号生命周期
- * runPassiveAccountLifecycle 包裹：history 轮询 + Supabase Realtime 双链路收信，
+ * runPassiveAccountLifecycle 包裹：history 轮询收信，
  * dispatchInboundDirectDm 分发入站消息，webhook/receive 回信
  */
 import type { ChannelPlugin } from "openclaw/plugin-sdk/channel-core";

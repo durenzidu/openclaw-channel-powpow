@@ -1,6 +1,6 @@
 /**
  * PowPow 网关账号生命周期
- * runPassiveAccountLifecycle 包裹：history 轮询 + Supabase Realtime 双链路收信，
+ * runPassiveAccountLifecycle 包裹：history 轮询收信，
  * dispatchInboundDirectDm 分发入站消息，webhook/receive 回信
  */
 
@@ -18,11 +18,9 @@ import {
   stripMarkdown,
 } from "openclaw/plugin-sdk/text-chunking";
 import { HistoryPoller } from "./history-poller.js";
-import { RealtimeSubscriber } from "./realtime-subscriber.js";
 import { MessageDedup } from "./message-dedup.js";
 import {
   extractMessageContent,
-  normalizeDbRow,
   normalizeHistoryMessage,
 } from "../messaging/inbound-handler.js";
 import { sendReply } from "../messaging/send-service.js";
@@ -71,9 +69,6 @@ export async function startPowpowGatewayAccount(
 
   const config = account.config;
   const pollEnabled = config.pollEnabled !== false;
-  const realtimeEnabled =
-    config.realtimeEnabled !== false &&
-    Boolean(account.supabaseUrl && account.supabaseAnonKey);
   const pollIntervalMs = Math.max(1000, config.pollIntervalMs ?? 5000);
   const historyLimit = config.historyLimit ?? 50;
   const requestTimeoutMs = config.requestTimeoutMs ?? 10000;
@@ -235,18 +230,6 @@ export async function startPowpowGatewayAccount(
           })
         : null;
 
-      const realtime = realtimeEnabled
-        ? new RealtimeSubscriber({
-            supabaseUrl: account.supabaseUrl ?? "",
-            supabaseAnonKey: account.supabaseAnonKey ?? "",
-            digitalHumanId: account.digitalHumanId,
-            accountId: account.accountId,
-            onUserMessage: (row) => {
-              handleInbound(normalizeDbRow(row));
-            },
-          })
-        : null;
-
       if (poller) {
         await poller.start((ids) => {
           for (const id of ids) {
@@ -254,20 +237,16 @@ export async function startPowpowGatewayAccount(
           }
         });
       }
-      if (realtime) {
-        await realtime.start();
-      }
 
       ctx.setStatus(channelReadyPatch({ accountId: account.accountId }));
       ctx.log?.info?.(
-        `[${account.accountId}] PowPow channel started (polling: ${pollEnabled ? `on @ ${pollIntervalMs}ms` : "off"}, realtime: ${realtimeEnabled ? "on" : "off"})`
+        `[${account.accountId}] PowPow channel started (polling: ${pollEnabled ? `on @ ${pollIntervalMs}ms` : "off"})`
       );
 
       return {
         stop: async () => {
           inboundQueue = [];
           poller?.stop();
-          await realtime?.stop();
           ctx.log?.info?.(`[${account.accountId}] PowPow channel stopped`);
         },
       };
