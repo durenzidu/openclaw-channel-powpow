@@ -1,6 +1,6 @@
 {
   "name": "@durenzidu/openclaw-channel-powpow",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "PowPow map digital-human chat channel plugin for OpenClaw - history polling inbound, webhook reply outbound, two-way messaging with map visitors",
   "type": "module",
   "main": "./dist/index.js",

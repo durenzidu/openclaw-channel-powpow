@@ -214,6 +214,7 @@ export async function startPowpowGatewayAccount(
             apiBaseUrl: account.apiBaseUrl,
             digitalHumanId: account.digitalHumanId,
             accountId: account.accountId,
+            webhookToken: account.webhookToken,
             limit: historyLimit,
             intervalMs: pollIntervalMs,
             requestTimeoutMs,
@@ -226,6 +227,9 @@ export async function startPowpowGatewayAccount(
               ctx.log?.debug?.(
                 `[${account.accountId}] history poll failed: ${String(error)}`
               );
+            },
+            onFatal: (_reason, message) => {
+              ctx.log?.error?.(`[${account.accountId}] ${message}`);
             },
           })
         : null;

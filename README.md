@@ -2,7 +2,7 @@
 
 PowPow 地图通信渠道插件 —— 让 OpenClaw 扮演 [PowPow](https://global.powpow.online) 地图上的数字人，与地图访客实时对话。
 
-## 架构（v1.2.1，标准 OpenClaw channel 插件）
+## 架构（v1.2.2，标准 OpenClaw channel 插件）
 
 PowPow 平台运行于 Vercel serverless + Supabase 架构，不提供常驻 WebSocket 端点（旧版 `wss://global.powpow.online:8080` 已下线）。本插件按官方 channel plugin 规范（`@openclaw/nostr` 同款组装方式）实现：
 
@@ -12,9 +12,11 @@ PowPow 平台运行于 Vercel serverless + Supabase 架构，不提供常驻 Web
    ▼
 ┌─────────────────────────────────────────────┐
 │ 收信：GET /api/openclaw/chat/history 轮询    │
+│  · X-Webhook-Token 鉴权（401 自停）           │
 │  · 默认 5s，可调至 2~3s（pollIntervalMs）     │
-│  · 消息 ID 去重 + 重启基线                   │
-│  · 基线未建立前不分发（防迟到回复风暴）       │
+│  · 增量拉取（since 游标）+ 消息 ID 去重        │
+│  · 重启基线，基线未建立前不分发                │
+│  · 410 数字人过期自动停止并提示续费             │
 └─────────────────────────────────────────────┘
    │  dispatchInboundDirectDm → OpenClaw agent
    ▼
@@ -31,6 +33,7 @@ PowPow 平台运行于 Vercel serverless + Supabase 架构，不提供常驻 Web
 - **无需公网端点**：agent 只发起出站 HTTPS 连接，本机/NAT 环境直接可用
 - **访客身份访问控制**：平台落库 `metadata.sender_id`，插件据此识别发件人，`open` / `allowlist` / `pairing` / `disabled` 策略真实可用
 - **重启安全**：启动时建立基线，不会回复历史消息；基线建立失败时自动退避重试，就绪前不分发
+- **致命错误自停**：token 失效（401）或数字人过期（410）时轮询自动停止并输出日志，不再无限重试
 
 ## 安装
 
@@ -94,11 +97,12 @@ openclaw plugins install @durenzidu/openclaw-channel-powpow
 - **v1.0.x**：通过常驻 WebSocket（`wss://global.powpow.online:8080`）收发消息，该端点已随平台 serverless 化下线，**旧版本已完全失效**
 - **v1.1.x**：仅实现通信层，未接入 OpenClaw plugin-sdk 接口层，无法被 OpenClaw 2026.9.5 运行时加载为 channel 插件
 - **v1.2.0 → v1.2.1**：移除 Supabase Realtime 收信链路（平台从未启用 Realtime publication，链路不可用），删除 `supabaseUrl` / `supabaseAnonKey` / `realtimeEnabled` 三个配置字段，纯轮询收信
+- **v1.2.1 → v1.2.2**：平台端点鉴权加固后，v1.2.1 轮询不携带 token 会 401 死循环，**必须升级**。升级后轮询携带 `X-Webhook-Token`，401/410 自动停止并输出日志
 - 迁移步骤：
 
-1. 升级插件到 1.2.1（`openclaw plugins update @durenzidu/openclaw-channel-powpow`）
-2. 从 `channels.powpow` 配置节删除 `supabaseUrl` / `supabaseAnonKey` / `realtimeEnabled` 三个字段（配置 schema 为 `additionalProperties: false`，残留字段会导致校验失败）
-3. 确认平台侧前提条件（见上）
+1. 升级插件到 1.2.2（`openclaw plugins update @durenzidu/openclaw-channel-powpow`）
+2. 确认 `channels.powpow` 配置节无 `supabaseUrl` / `supabaseAnonKey` / `realtimeEnabled` 残留字段（配置 schema 为 `additionalProperties: false`，残留字段会导致校验失败）
+3. 确认平台侧前提条件（见上），尤其 webhookToken 有效、数字人未过期
 
 ## 开发
 
@@ -107,7 +111,7 @@ npm install
 npm run build      # tsc 编译到 dist/
 npm run type-check
 
-# 冒烟测试（mock PowPow 服务端端到端，16 项检查）
+# 冒烟测试（mock PowPow 服务端端到端，26 项检查）
 node --import ./smoke/register-hooks.mjs smoke/smoke-test.mjs
 
 # ClawHub 校验

@@ -32,6 +32,10 @@ async function waitFor(predicate, timeoutMs, label) {
   throw new Error(`timeout waiting for ${label}`);
 }
 
+function historyRequests(server) {
+  return server.requestLog.filter((e) => e.path === "/api/openclaw/chat/history");
+}
+
 function makeContext(server, { webhookToken = "tok-abc", dmPolicy = "open", allowFrom, maxRetries = 2 } = {}) {
   const abortController = new AbortController();
   const statuses = [];
@@ -135,6 +139,33 @@ async function main() {
     `got: ${reply4?.message}`
   );
 
+  // v1.2.2 hardening: authenticated + incremental polling
+  await sleep(POLL_MS * 2);
+  const t1History = historyRequests(server);
+  check(
+    "T1 history requests carry X-Webhook-Token",
+    t1History.length > 0 && t1History.every((e) => e.token === "tok-abc"),
+    `${t1History.length} requests, tokens: ${[...new Set(t1History.map((e) => e.token))].join(",")}`
+  );
+  check(
+    "T1 incremental polls use since cursor",
+    t1History.some((e) => (e.query ?? "").includes("since=")),
+    "no since= request seen"
+  );
+  check(
+    "T1 no offset-based two-step fetch",
+    t1History.every((e) => !(e.query ?? "").includes("offset=")),
+    "found offset= requests (old two-step pattern)"
+  );
+  const t1CountBefore = historyRequests(server).length;
+  await sleep(POLL_MS * 3);
+  const t1Delta = historyRequests(server).length - t1CountBefore;
+  check(
+    "T1 single history request per poll",
+    t1Delta >= 2 && t1Delta <= 4,
+    `delta ${t1Delta} over ~3 polls (expected ~3, old two-step would be ~6)`
+  );
+
   t1.abortController.abort();
   await gatewayPromise;
   check("T1 gateway exits cleanly on abort", true);
@@ -177,25 +208,84 @@ async function main() {
   await gateway2;
 
   // ---------------------------------------------------------------- test 3
-  // wrong webhook token: platform 401 -> 4xx fast-fail, no crash, gateway alive
-  const t3 = makeContext(server, { webhookToken: "tok-wrong", maxRetries: 3 });
+  // outbound reply 401: platform rejects webhook/receive (failReceiveWith401),
+  // inbound polling stays healthy -> 4xx fast-fail, error logged, no crash
+  const t3 = makeContext(server, { webhookToken: "tok-abc", maxRetries: 3 });
+  server.failReceiveWith401 = true;
   const gateway3 = startPowpowGatewayAccount(t3.ctx);
   gateway3.catch(() => {});
   await waitFor(() => t3.statuses.find((s) => s.lifecycle === "ready"), 8000, "T3 gateway ready");
 
   server.addUserMessage({ id: "m8", sessionId: "sess-zeta", content: "will fail auth", senderId: "user-777" });
-  await waitFor(() => t3.logs.some(([lvl]) => lvl === "error"), 10000, "T3 dispatch error logged");
+  await waitFor(
+    () => t3.logs.some(([lvl, msg]) => lvl === "error" && String(msg).includes("reply failed")),
+    10000,
+    "T3 dispatch error logged"
+  );
   check("T3 401 reply failure is logged, not thrown", true);
 
-  const unauthorizedAttempts = server.requestLog.filter(
-    (e, i) =>
-      e.method === "POST" && server.requestLog.indexOf(e) >= 0 && e.path === "/api/openclaw/webhook/receive"
+  const receiveAttempts = server.requestLog.filter(
+    (e) => e.method === "POST" && e.path === "/api/openclaw/webhook/receive"
   );
-  check("T3 401 attempt reached the platform", unauthorizedAttempts.length > 0);
+  check("T3 401 attempt reached the platform", receiveAttempts.length > 0);
 
   check("T3 gateway still running after reply failure (no crash)", true);
+  server.failReceiveWith401 = false;
   t3.abortController.abort();
   await gateway3;
+
+  // ---------------------------------------------------------------- test 4
+  // inbound poller auth fatal: wrong webhookToken -> history 401 ->
+  // poller stops with an explicit error (no infinite backoff), gateway alive
+  const t4 = makeContext(server, { webhookToken: "tok-wrong", maxRetries: 2 });
+  const gateway4 = startPowpowGatewayAccount(t4.ctx);
+  gateway4.catch(() => {});
+  await waitFor(
+    () => t4.logs.some(([lvl, msg]) => lvl === "error" && String(msg).includes("401")),
+    8000,
+    "T4 fatal invalid-token log"
+  );
+  check("T4 invalid webhookToken: poller reports explicit 401 fatal error", true);
+
+  const t4CountBefore = historyRequests(server).length;
+  await sleep(POLL_MS * 3 + 500);
+  const t4Delta = historyRequests(server).length - t4CountBefore;
+  check(
+    "T4 poller stopped after 401 (no further history requests)",
+    t4Delta === 0,
+    `+${t4Delta} history requests after fatal`
+  );
+
+  t4.abortController.abort();
+  await gateway4;
+  check("T4 gateway exits cleanly on abort after fatal", true);
+
+  // ---------------------------------------------------------------- test 5
+  // digital human expired: history 410 DH_EXPIRED ->
+  // poller stops with renewal notice, gateway alive
+  server.expireDigitalHuman();
+  const t5 = makeContext(server, { webhookToken: "tok-abc", maxRetries: 2 });
+  const gateway5 = startPowpowGatewayAccount(t5.ctx);
+  gateway5.catch(() => {});
+  await waitFor(
+    () => t5.logs.some(([lvl, msg]) => lvl === "error" && String(msg).includes("续费")),
+    8000,
+    "T5 fatal dh-expired log"
+  );
+  check("T5 expired digital human: poller reports 410 with renewal notice", true);
+
+  const t5CountBefore = historyRequests(server).length;
+  await sleep(POLL_MS * 3 + 500);
+  const t5Delta = historyRequests(server).length - t5CountBefore;
+  check(
+    "T5 poller stopped after 410 (no further history requests)",
+    t5Delta === 0,
+    `+${t5Delta} history requests after fatal`
+  );
+
+  t5.abortController.abort();
+  await gateway5;
+  check("T5 gateway exits cleanly on abort after fatal", true);
 
   // ---------------------------------------------------------------- summary
   await server.close();

@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.2.2（2026-09-27）
+
+**变更：history 轮询接入 webhook token 鉴权、410 过期识别，轮询改为 since 增量拉取。配置字段无变化，升级即生效。**
+
+### 背景
+
+平台端点已全面鉴权加固（2026-09-26 部署）：`GET /api/openclaw/chat/history` 现要求 `X-Webhook-Token` 请求头，未携带或错误 token 返回 401；数字人过期后返回 410（`DH_EXPIRED`）。v1.2.1 的轮询请求不携带 token，升级后收信链路 401 死循环（无限退避重试、永不成功），且数字人过期后无法感知、持续无意义轮询。本版本对齐平台新契约。
+
+### 变更
+
+- history 轮询每个请求携带 `X-Webhook-Token` 请求头（取自配置 `webhookToken`）
+- 401 识别为致命错误：`HistoryFatalError('invalid-token')` → `onFatal` 回调 → 轮询器自停（不再无限退避），日志提示检查 token
+- 410 识别为数字人过期：`HistoryFatalError('dh-expired')` → `onFatal` 回调 → 轮询器自停，日志提示到 PowPow 续费（1 徽章 = 30 天）
+- 轮询改为增量拉取：基线建立用单次 `order=desc&limit=N` 请求（原为两步 offset 分页，请求数减半）；此后每轮仅请求 `since=<游标>` 之后的新消息，减小响应体积与平台负载
+- 平台侧兼容：若平台忽略 `since` 参数返回全量，网关层 MessageDedup 去重兜底，不会重复分发
+
+### 迁移
+
+从 v1.2.1 升级：直接 `openclaw plugins update @durenzidu/openclaw-channel-powpow` 即可，无配置变更。前提：平台侧 webhookToken 与数字人均有效——token 失效（401）或数字人过期（410）时插件会自动停止轮询并输出日志，按日志提示更新 token 或续费后重启 agent 即可恢复。
+
 ## 1.2.1（2026-09-25）
 
 **变更：移除 Supabase Realtime 收信链路，纯轮询收信；配置字段减少三个。**
