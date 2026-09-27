@@ -38,7 +38,8 @@ PowPow 平台运行于 Vercel serverless + Supabase 架构，不提供常驻 Web
 ## 安装
 
 ```bash
-openclaw plugins install @durenzidu/openclaw-channel-powpow
+# 包仅发布于 ClawHub（npm registry 上不存在），安装需带 clawhub: 前缀
+openclaw plugins install clawhub:@durenzidu/openclaw-channel-powpow
 ```
 
 安装后按 CLI setup 向导配置（或直接编辑 `channels.powpow` 配置节）：
@@ -59,7 +60,7 @@ openclaw plugins install @durenzidu/openclaw-channel-powpow
   "digitalHumanId": "<数字人 ID（UUID）>",
   "webhookToken": "<webhook token>",
   "dmPolicy": "open",
-  "allowFrom": [],
+  "allowFrom": ["*"],
   "pollEnabled": true,
   "pollIntervalMs": 5000,
   "historyLimit": 50,
@@ -68,6 +69,17 @@ openclaw plugins install @durenzidu/openclaw-channel-powpow
   "maxMessageLength": 2000
 }
 ```
+
+> **重要**：OpenClaw 的 `dmPolicy="open"` 默认要求 `allowFrom` 显式包含 `"*"` 才真正放行所有访客（宿主侧约定，默认开启）。若 `allowFrom` 为空数组且不含 `"*"`，**所有访客消息都会被静默丢弃**。需要白名单模式时改用 `"dmPolicy": "allowlist"` 并填入访客 ID 列表。
+
+### 配置键映射（两个名字，别改错地方）
+
+| 配置键 | 用途 |
+|---|---|
+| `plugins.entries.powpow-channel` | 插件启用开关（**插件 id**，来自 `openclaw.plugin.json`） |
+| `channels.powpow` | 渠道配置节（**渠道 id**，含 digitalHumanId / webhookToken 等） |
+
+排障时先确认改的是对应的那一个。
 
 ### 配置项从哪里拿
 
@@ -100,7 +112,7 @@ openclaw plugins install @durenzidu/openclaw-channel-powpow
 - **v1.2.1 → v1.2.2**：平台端点鉴权加固后，v1.2.1 轮询不携带 token 会 401 死循环，**必须升级**。升级后轮询携带 `X-Webhook-Token`，401/410 自动停止并输出日志
 - 迁移步骤：
 
-1. 升级插件到 1.2.2（`openclaw plugins update @durenzidu/openclaw-channel-powpow`）
+1. 升级插件到 1.2.3（`openclaw plugins update clawhub:@durenzidu/openclaw-channel-powpow`）
 2. 确认 `channels.powpow` 配置节无 `supabaseUrl` / `supabaseAnonKey` / `realtimeEnabled` 残留字段（配置 schema 为 `additionalProperties: false`，残留字段会导致校验失败）
 3. 确认平台侧前提条件（见上），尤其 webhookToken 有效、数字人未过期
 

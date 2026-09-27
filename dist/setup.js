@@ -24,6 +24,10 @@ function validateHttpUrl(raw, label) {
     }
     return null;
 }
+const POWPOW_DH_ID_PATTERN = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+function isValidPowpowDigitalHumanId(raw) {
+    return POWPOW_DH_ID_PATTERN.test(raw) || /^[0-9a-fA-F]{32}$/.test(raw);
+}
 export function createPowpowSetupAdapter(params) {
     const channel = "powpow";
     return {
@@ -43,7 +47,7 @@ export function createPowpowSetupAdapter(params) {
                 return "PowPow requires --digital-human-id (the PowPow digital human UUID).";
             }
             if (input.input.digitalHumanId?.trim() &&
-                !/^[0-9a-fA-F]{8,64}$/.test(input.input.digitalHumanId.trim())) {
+                !isValidPowpowDigitalHumanId(input.input.digitalHumanId.trim())) {
                 return "PowPow digital human id must be a UUID.";
             }
             const hasToken = Boolean(input.input.webhookToken?.trim()) ||
@@ -58,18 +62,11 @@ export function createPowpowSetupAdapter(params) {
                 if (error)
                     return error;
             }
-            if (input.input.supabaseUrl?.trim()) {
-                const error = validateHttpUrl(input.input.supabaseUrl.trim(), "Supabase URL");
-                if (error)
-                    return error;
-            }
             return null;
         },
         applyAccountConfig: (input) => {
             const digitalHumanId = input.input.digitalHumanId?.trim();
             const apiBaseUrl = input.input.apiBaseUrl?.trim();
-            const supabaseUrl = input.input.supabaseUrl?.trim();
-            const supabaseAnonKey = input.input.supabaseAnonKey?.trim();
             return patchTopLevelChannelConfigSection({
                 cfg: input.cfg,
                 channel,
@@ -82,8 +79,6 @@ export function createPowpowSetupAdapter(params) {
                         ? { webhookToken: input.input.webhookToken.trim() }
                         : {}),
                     ...(apiBaseUrl ? { apiBaseUrl } : {}),
-                    ...(supabaseUrl ? { supabaseUrl } : {}),
-                    ...(supabaseAnonKey ? { supabaseAnonKey } : {}),
                 }),
             });
         },
@@ -120,20 +115,6 @@ export function createPowpowSetupContract(adapter) {
                 cli: {
                     flags: "--api-base-url <url>",
                     description: "PowPow API base URL",
-                },
-            },
-            supabaseUrl: {
-                kind: "string",
-                cli: {
-                    flags: "--supabase-url <url>",
-                    description: "Supabase project URL (enables realtime inbound)",
-                },
-            },
-            supabaseAnonKey: {
-                kind: "string",
-                cli: {
-                    flags: "--supabase-anon-key <key>",
-                    description: "Supabase anon key",
                 },
             },
         },

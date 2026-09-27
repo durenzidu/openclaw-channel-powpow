@@ -1,6 +1,6 @@
 {
   "name": "@durenzidu/openclaw-channel-powpow",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "PowPow map digital-human chat channel plugin for OpenClaw - history polling inbound, webhook reply outbound, two-way messaging with map visitors",
   "type": "module",
   "main": "./dist/index.js",
@@ -69,7 +69,7 @@
     "install": {
       "clawhubSpec": "clawhub:@durenzidu/openclaw-channel-powpow",
       "npmSpec": "@durenzidu/openclaw-channel-powpow",
-      "defaultChoice": "npm",
+      "defaultChoice": "clawhub",
       "minHostVersion": ">=2026.9.5"
     },
     "compat": {
@@ -80,7 +80,7 @@
     },
     "release": {
       "publishToClawHub": true,
-      "publishToNpm": true
+      "publishToNpm": false
     },
     "runtimeExtensions": [
       "./dist/index.js"

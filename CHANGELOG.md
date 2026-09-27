@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.2.3（2026-09-27）
+
+**变更：修复全新安装阻断性 ID 不一致、setup 向导 UUID 误拒，清理 v1.2.1 未删净的 Supabase setup 残留，修正 README 安装命令与示例配置。配置字段无变化，升级即生效。**
+
+### 背景
+
+2026-09-27 在 OpenClaw 2026.9.6 + Node 24.20 真机实测发现 v1.2.2 全新安装即失败（问题报告 `powpow-plugin-issue-report_263b6163.md`）：`openclaw plugins doctor` 报 `plugin id mismatch (config uses "powwow-channel", export uses "powwow")`——manifest 声明插件 id 为 `powpow-channel`，而入口 `defineBundledChannelEntry` 导出 `id: "powwow"`，宿主运行时校验拒绝加载。同轮实测还发现 setup 向导对合法 UUID 报 "must be a UUID"、README 安装命令指向不存在的 npm 包、示例配置导致全部访客消息被丢弃。
+
+### 变更
+
+- **[P0] 入口 ID 对齐 manifest**：`src/index.ts` 的 `defineBundledChannelEntry` id 由 `"powwow"` 改为 `"powpow-channel"`（与 `openclaw.plugin.json` 一致）。渠道 id 不变，配置节仍为 `channels.powpow`
+- **[P1] setup 向导 UUID 校验修复**：原正则 `/^[0-9a-fA-F]{8,64}$/` 不匹配连字符，标准 UUID（如 `65ad3b5f-6909-4ffa-9239-37de33d79311`）必然被拒。现接受标准带横线 UUID 与 32 位无横线形式
+- **[P2] Supabase setup 残留清理**：v1.2.1 从 schema/zod 层删除了 `supabaseUrl`/`supabaseAnonKey`，但 setup 契约（`src/setup.ts`）漏删——若用户传 `--supabase-url` 会写入 `channels.powpow` 并因 schema `additionalProperties:false` 校验失败。本版本删净契约字段、输入类型、校验与写入逻辑；入口 description 同步移除 "Supabase Realtime" 过时描述
+- **[D] 安装元数据纠偏**：`defaultChoice` 由 `"npm"` 改为 `"clawhub"`、`publishToNpm` 改为 `false`（包从未发布至 npm，原元数据误导安装器走 404 路径）
+- **[D] README 修正**：安装/升级命令补 `clawhub:` 前缀；示例配置 `allowFrom` 由 `[]` 改为 `["*"]` 并加注说明（OpenClaw 约定 `dmPolicy="open"` 需显式 `"*"`，否则全部 DM 被静默丢弃）；新增插件 id（`plugins.entries.powpow-channel`）与渠道 id（`channels.powpow`）双键映射说明
+
+### 已知不修（宿主/平台侧行为）
+
+- Gateway 启动时 "data/settings upgrade is unfinished" 警告：宿主升级确认协议，非插件阻断项
+- 模型鉴权失败时访客收到英文错误文本：宿主 agent 回复失败的兜底行为
+
+### 迁移
+
+从 v1.2.2 升级：`openclaw plugins update clawhub:@durenzidu/openclaw-channel-powpow`，无配置变更。若此前按旧 README 配置了 `"allowFrom": []`，请改为 `["*"]`（否则数字人不回复任何访客）。曾本地手改 `dist/index.js` 修复 ID 的用户升级后以发布产物为准，无需保留手改。
+
 ## 1.2.2（2026-09-27）
 
 **变更：history 轮询接入 webhook token 鉴权、410 过期识别，轮询改为 since 增量拉取。配置字段无变化，升级即生效。**

@@ -9,8 +9,6 @@ export interface PowpowSetupInput {
     webhookToken?: string;
     useEnvToken?: boolean;
     apiBaseUrl?: string;
-    supabaseUrl?: string;
-    supabaseAnonKey?: string;
 }
 export declare function createPowpowSetupAdapter(params: {
     resolveAccountId: (cfg: OpenClawConfig, accountId?: string) => string;

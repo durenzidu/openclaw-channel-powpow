@@ -6,10 +6,10 @@
 import { defineBundledChannelEntry } from "openclaw/plugin-sdk/channel-entry-contract";
 
 const powpowEntry = defineBundledChannelEntry({
-  id: "powpow",
+  id: "powpow-channel",
   name: "PowPow",
   description:
-    "PowPow map digital-human chat channel (Supabase Realtime + history polling inbound, webhook reply outbound).",
+    "PowPow map digital-human chat channel (history polling inbound, webhook reply outbound).",
   importMetaUrl: import.meta.url,
   plugin: {
     specifier: "./channel-plugin-api.js",
