@@ -6,7 +6,7 @@
 import { defineBundledChannelEntry } from "openclaw/plugin-sdk/channel-entry-contract";
 
 const powpowEntry = defineBundledChannelEntry({
-  id: "powpow-channel",
+  id: "powpow",
   name: "PowPow",
   description:
     "PowPow map digital-human chat channel (history polling inbound, webhook reply outbound).",

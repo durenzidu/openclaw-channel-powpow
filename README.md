@@ -1,6 +1,8 @@
-# @durenzidu/openclaw-channel-powpow
+# @soimy/openclaw-channel-powpow
 
 PowPow 地图通信渠道插件 —— 让 OpenClaw 扮演 [PowPow](https://global.powpow.online) 地图上的数字人，与地图访客实时对话。
+
+> **关于本包**：这是 `@soimy` scope 的发布线（沿用该包 2026-04 首发时锁定的插件运行时 id `powpow`），功能与官方主线 `@durenzidu/openclaw-channel-powpow` 1.2.3 完全等价（相同的轮询收信 + webhook 回信架构）。此前该 scope 下的 1.0.0 为已失效的 WebSocket 架构，本次 1.2.3 为其直接升级版。新用户建议安装官方主线包；本包面向存量 @soimy 用户提供就地升级。
 
 ## 架构（v1.2.2，标准 OpenClaw channel 插件）
 
@@ -39,7 +41,7 @@ PowPow 平台运行于 Vercel serverless + Supabase 架构，不提供常驻 Web
 
 ```bash
 # 包仅发布于 ClawHub（npm registry 上不存在），安装需带 clawhub: 前缀
-openclaw plugins install clawhub:@durenzidu/openclaw-channel-powpow
+openclaw plugins install clawhub:@soimy/openclaw-channel-powpow
 ```
 
 安装后按 CLI setup 向导配置（或直接编辑 `channels.powpow` 配置节）：
@@ -112,7 +114,7 @@ openclaw plugins install clawhub:@durenzidu/openclaw-channel-powpow
 - **v1.2.1 → v1.2.2**：平台端点鉴权加固后，v1.2.1 轮询不携带 token 会 401 死循环，**必须升级**。升级后轮询携带 `X-Webhook-Token`，401/410 自动停止并输出日志
 - 迁移步骤：
 
-1. 升级插件到 1.2.3（`openclaw plugins update clawhub:@durenzidu/openclaw-channel-powpow`）
+1. 升级插件到 1.2.3（`openclaw plugins update clawhub:@soimy/openclaw-channel-powpow`）
 2. 确认 `channels.powpow` 配置节无 `supabaseUrl` / `supabaseAnonKey` / `realtimeEnabled` 残留字段（配置 schema 为 `additionalProperties: false`，残留字段会导致校验失败）
 3. 确认平台侧前提条件（见上），尤其 webhookToken 有效、数字人未过期
 

@@ -13,7 +13,7 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
 
 class PowPowLogger {
   private level: LogLevel = 'info';
-  private readonly prefix = '[powpow-channel]';
+  private readonly prefix = '[powpow]';
 
   setLevel(level: LogLevel): void {
     this.level = level;

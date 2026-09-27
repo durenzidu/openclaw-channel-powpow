@@ -9,7 +9,7 @@ const LEVEL_ORDER = {
 };
 class PowPowLogger {
     level = 'info';
-    prefix = '[powpow-channel]';
+    prefix = '[powpow]';
     setLevel(level) {
         this.level = level;
     }
